@@ -1,7 +1,33 @@
 import sys
 from datetime import datetime
+import requests
+import json
 
 from constants import currency_codes
+
+with open('config.json', 'r') as file:
+    api_key = json.load(file)['api_key']
+
+
+def calculate_result(amount, base_currency, target_currency, conversion_rate):
+    return f"{amount:.2f} {base_currency} is {(amount * conversion_rate):.2f} {target_currency}"
+
+
+def get_conversion_rate_from_api(base_currency, target_currency, date):
+    url = f"https://api.fastforex.io/historical?api_key={api_key}&from={base_currency}&to={target_currency}&date={date}"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        data = response.json()
+        if 'results' in data:
+            return data['results'][target_currency]
+        # Error yet to be handled
+    else:
+        return {'error': f"Error {response.status_code}: {response.text}"}
+
+
+def get_cached_conversion_rate(base_currency, target_currency):
+    return None
 
 
 def receive_amount_and_validate():
@@ -37,8 +63,10 @@ def main(date_str):
         base_currency = receive_currency_and_validate()
         target_currency = receive_currency_and_validate()
 
-        print(base_currency)
-        print(target_currency)
+        cached_conversion_rate = get_cached_conversion_rate(base_currency, target_currency)
+        conversion_rate = cached_conversion_rate if cached_conversion_rate else get_conversion_rate_from_api(base_currency, target_currency, date)
+
+        print(calculate_result(amount, base_currency, target_currency, conversion_rate))
     except ValueError:
         print("Error: The date format should be YYYY-MM-DD.")
         sys.exit(1)
