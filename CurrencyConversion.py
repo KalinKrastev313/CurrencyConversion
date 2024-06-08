@@ -40,7 +40,12 @@ def get_conversion_rate_from_api(base_currency, target_currency, date):
         return {'error': f"Error {response.status_code}: {response.text}"}
 
 
-def get_cached_conversion_rate(base_currency, target_currency):
+def get_cached_conversion_rate(date_str, base_currency, target_currency):
+    with open('cached_conversion_rates.json', 'r') as file:
+        data = json.load(file)[0]
+
+    if date_str in data and base_currency in data[date_str] and target_currency in data[date_str][base_currency]:
+        return data[date_str][base_currency][target_currency]
     return None
 
 
@@ -135,10 +140,9 @@ def main(date_str):
         base_currency = receive_currency_and_validate()
         target_currency = receive_currency_and_validate()
 
-        cached_conversion_rate = get_cached_conversion_rate(base_currency, target_currency)
+        cached_conversion_rate = get_cached_conversion_rate(date_str, base_currency, target_currency)
         conversion_rate = cached_conversion_rate if cached_conversion_rate else get_conversion_rate_from_api(base_currency, target_currency, date)
 
-        print(conversion_rate)
         converted_amount = calculate_converted_amount(amount, conversion_rate)
         output_result(amount, base_currency, target_currency, converted_amount)
 
