@@ -4,9 +4,18 @@ import requests
 import json
 
 from constants import currency_codes
+from custom_exceptions import ProgramEndedException
 
 with open('config.json', 'r') as file:
     api_key = json.load(file)['api_key']
+
+
+def receive_input():
+    result = input()
+    if not result.upper() == "END":
+        return result
+    else:
+        raise ProgramEndedException
 
 
 def calculate_result(amount, base_currency, target_currency, conversion_rate):
@@ -32,7 +41,7 @@ def get_cached_conversion_rate(base_currency, target_currency):
 
 def receive_amount_and_validate():
     while True:
-        amount = input()
+        amount = receive_input()
         try:
             value = float(amount)
 
@@ -46,7 +55,7 @@ def receive_amount_and_validate():
 
 def receive_currency_and_validate():
     while True:
-        curr_code = input()
+        curr_code = receive_input()
         # The first check for length is executed first and thus saves time
         if len(curr_code) == 3 and curr_code.upper() in currency_codes:
             return curr_code.upper()
@@ -70,6 +79,8 @@ def main(date_str):
     except ValueError:
         print("Error: The date format should be YYYY-MM-DD.")
         sys.exit(1)
+    except ProgramEndedException:
+        print("Program was ended")
 
 
 if __name__ == "__main__":
