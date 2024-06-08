@@ -4,7 +4,7 @@ import requests
 import json
 
 from constants import currency_codes
-from custom_exceptions import ProgramEndedException
+from custom_exceptions import ProgramEndedException, DateInWrongFormat, FormattingInputException
 
 with open('config.json', 'r') as file:
     api_key = json.load(file)['api_key']
@@ -63,9 +63,16 @@ def receive_currency_and_validate():
             print('Please enter a valid currency code')
 
 
+def parse_date(date_str):
+    try:
+        return datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        raise DateInWrongFormat
+
+
 def main(date_str):
     try:
-        date = datetime.strptime(date_str, '%Y-%m-%d')
+        date = parse_date(date_str)
         print(f"Performing currency conversion for the date: {date.strftime('%Y-%m-%d')}")
 
         amount = receive_amount_and_validate()
@@ -76,9 +83,13 @@ def main(date_str):
         conversion_rate = cached_conversion_rate if cached_conversion_rate else get_conversion_rate_from_api(base_currency, target_currency, date)
 
         print(calculate_result(amount, base_currency, target_currency, conversion_rate))
-    except ValueError:
-        print("Error: The date format should be YYYY-MM-DD.")
-        sys.exit(1)
+    # except ValueError:
+    #     print("Error: The date format should be YYYY-MM-DD.")
+    #     sys.exit(1)
+    except FormattingInputException as e:
+        print(e.correct_format_message)
+        if e.should_finish_program:
+            sys.exit(1)
     except ProgramEndedException:
         print("Program was ended")
 
