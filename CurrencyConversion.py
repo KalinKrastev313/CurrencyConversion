@@ -110,12 +110,6 @@ def update_json_file(filepath, new_entry):
 def save_conversion_rates(date_str, base_currency, target_currency, conversion_rate):
     data = load_json_file_if_exists_or_return_empty_list('cached_conversion_rates.json')
 
-
-    # conversion_rates = {
-    #     "USD": {"EUR": 0.85, "JPY": 110.53, "GBP": 0.75},
-    #     "EUR": {"USD": 1.18, "JPY": 130.02, "GBP": 0.88}
-    # }
-
     def update_nested_dict(d, keys, value):
         for key in keys[:-1]:
             if key not in d:
