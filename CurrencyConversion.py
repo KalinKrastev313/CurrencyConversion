@@ -1,102 +1,39 @@
 import sys
-from datetime import datetime
-import requests
-
-from constants import currency_codes
-from custom_exceptions import ProgramEndedException, DateInWrongFormat, FormattingInputException
-from json_cache_and_logs_management import ConversionsCacheController, ConversionsLogsController, get_api_key_from_config
-
-
-api_key = get_api_key_from_config()
-
-
-def receive_input():
-    result = input().strip()
-    if not result.upper() == "END":
-        return result
-    else:
-        raise ProgramEndedException
-
-
-def calculate_converted_amount(amount, conversion_rate):
-    return amount * conversion_rate
-
-
-def output_result(amount, base_currency, target_currency, converted_amount):
-    print(f"{amount:.2f} {base_currency} is {converted_amount:.2f} {target_currency}")
-
-
-def get_conversion_rate_from_api(base_currency, target_currency, date):
-    url = f"https://api.fastforex.io/historical?api_key={api_key}&from={base_currency}&to={target_currency}&date={date}"
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        data = response.json()
-        if 'results' in data:
-            return data['results'][target_currency]
-        # Error yet to be handled
-    else:
-        return {'error': f"Error {response.status_code}: {response.text}"}
-
-
-def receive_amount_and_validate():
-    while True:
-        amount = receive_input()
-        try:
-            value = float(amount)
-
-            if round(value, 2) == value:
-                return value
-            else:
-                print("Please enter a valid amount")
-        except ValueError:
-            print("Please enter a valid amount")
-
-
-def receive_currency_and_validate():
-    while True:
-        curr_code = receive_input()
-        # The first check for length is executed first and thus saves time
-        if len(curr_code) == 3 and curr_code.upper() in currency_codes:
-            return curr_code.upper()
-        else:
-            print('Please enter a valid currency code')
-
-
-def parse_date(date_str):
-    try:
-        return datetime.strptime(date_str, '%Y-%m-%d')
-    except ValueError:
-        raise DateInWrongFormat
+from misc_functions import get_conversion_rate_from_api, calculate_converted_amount, output_result
+from input_management import parse_date, receive_amount_and_validate, receive_currency_and_validate
+from custom_exceptions import ProgramEndedException, FormattingInputException
+from json_cache_and_logs_management import ConversionsCacheController, ConversionsLogsController
 
 
 def main(date_str):
-    # while True:
-    try:
-        date = parse_date(date_str)
-        print(f"Performing currency conversion for the date: {date.strftime('%Y-%m-%d')}")
+    while True:
+        try:
+            date = parse_date(date_str)
+            print(f"Performing currency conversion for the date: {date.strftime('%Y-%m-%d')}")
 
-        amount = receive_amount_and_validate()
-        base_currency = receive_currency_and_validate()
-        target_currency = receive_currency_and_validate()
+            amount = receive_amount_and_validate()
+            base_currency = receive_currency_and_validate()
+            target_currency = receive_currency_and_validate()
 
-        cache_manager = ConversionsCacheController(date_str, base_currency, target_currency)
-        cached_conversion_rate = cache_manager.get_cached_conversion_rate()
-        conversion_rate = cached_conversion_rate if cached_conversion_rate else get_conversion_rate_from_api(base_currency, target_currency, date)
-        cache_manager.save_conversion_rates(conversion_rate)
+            cache_manager = ConversionsCacheController(date_str, base_currency, target_currency)
+            cached_conversion_rate = cache_manager.get_cached_conversion_rate()
+            conversion_rate = cached_conversion_rate if cached_conversion_rate else get_conversion_rate_from_api(base_currency, target_currency, date)
+            cache_manager.save_conversion_rates(conversion_rate)
 
-        converted_amount = calculate_converted_amount(amount, conversion_rate)
-        output_result(amount, base_currency, target_currency, converted_amount)
+            converted_amount = calculate_converted_amount(amount, conversion_rate)
+            output_result(amount, base_currency, target_currency, converted_amount)
 
-        logs_manager = ConversionsLogsController(date_str, amount, base_currency, target_currency, converted_amount)
-        logs_manager.update_logs()
+            logs_manager = ConversionsLogsController(date_str, amount, base_currency, target_currency, converted_amount)
+            logs_manager.update_logs()
 
-    except FormattingInputException as e:
-        print(e.correct_format_message)
-        if e.should_finish_program:
-            sys.exit(1)
-    except ProgramEndedException:
-        print("Program was ended")
+        except FormattingInputException as e:
+            print(e.correct_format_message)
+            if e.should_finish_program:
+                sys.exit(1)
+            break
+        except ProgramEndedException:
+            print("Program was ended")
+            break
 
 
 if __name__ == "__main__":
