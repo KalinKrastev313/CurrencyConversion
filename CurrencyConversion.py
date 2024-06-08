@@ -1,3 +1,4 @@
+import os
 import sys
 from datetime import datetime
 import requests
@@ -18,8 +19,12 @@ def receive_input():
         raise ProgramEndedException
 
 
-def calculate_result(amount, base_currency, target_currency, conversion_rate):
-    return f"{amount:.2f} {base_currency} is {(amount * conversion_rate):.2f} {target_currency}"
+def calculate_converted_amount(amount, conversion_rate):
+    return amount * conversion_rate
+
+
+def output_result(amount, base_currency, target_currency, converted_amount):
+    print(f"{amount:.2f} {base_currency} is {converted_amount:.2f} {target_currency}")
 
 
 def get_conversion_rate_from_api(base_currency, target_currency, date):
@@ -70,6 +75,35 @@ def parse_date(date_str):
         raise DateInWrongFormat
 
 
+def create_conversion_entry(date_str, amount, base_currency, target_currency, converted_amount):
+    return [
+        {
+            "date": date_str,
+            "amount": amount,
+            "base_currency": base_currency,
+            "target_currency": target_currency,
+            "converted_amount": converted_amount
+        }
+            ]
+
+
+def update_json_file(filepath, new_entry):
+    data = []
+
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as file:
+            try:
+                data = json.load(file)
+            except json.JSONDecodeError:
+                data = []
+
+    data.append(new_entry)
+
+    # Some sources claim that due to json structure, append from the last line wouldn't work and thus rewriting is standard
+    with open(filepath, 'w') as file:
+        json.dump(data, file, indent=4)
+
+
 def main(date_str):
     try:
         date = parse_date(date_str)
@@ -82,7 +116,13 @@ def main(date_str):
         cached_conversion_rate = get_cached_conversion_rate(base_currency, target_currency)
         conversion_rate = cached_conversion_rate if cached_conversion_rate else get_conversion_rate_from_api(base_currency, target_currency, date)
 
-        print(calculate_result(amount, base_currency, target_currency, conversion_rate))
+        print(conversion_rate)
+        converted_amount = calculate_converted_amount(amount, conversion_rate)
+        output_result(amount, base_currency, target_currency, converted_amount)
+
+        new_entry = create_conversion_entry(date_str, amount, base_currency, target_currency, converted_amount)
+        update_json_file('conversions.json', new_entry)
+
     # except ValueError:
     #     print("Error: The date format should be YYYY-MM-DD.")
     #     sys.exit(1)
