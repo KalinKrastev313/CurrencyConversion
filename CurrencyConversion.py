@@ -1,14 +1,13 @@
-import os
 import sys
 from datetime import datetime
 import requests
-import json
 
 from constants import currency_codes
 from custom_exceptions import ProgramEndedException, DateInWrongFormat, FormattingInputException
+from json_cache_and_logs_management import ConversionsCacheController, ConversionsLogsController, get_api_key_from_config
 
-with open('config.json', 'r') as file:
-    api_key = json.load(file)['api_key']
+
+api_key = get_api_key_from_config()
 
 
 def receive_input():
@@ -38,15 +37,6 @@ def get_conversion_rate_from_api(base_currency, target_currency, date):
         # Error yet to be handled
     else:
         return {'error': f"Error {response.status_code}: {response.text}"}
-
-
-def get_cached_conversion_rate(date_str, base_currency, target_currency):
-    with open('cached_conversion_rates.json', 'r') as file:
-        data = json.load(file)[0]
-
-    if date_str in data and base_currency in data[date_str] and target_currency in data[date_str][base_currency]:
-        return data[date_str][base_currency][target_currency]
-    return None
 
 
 def receive_amount_and_validate():
@@ -80,58 +70,8 @@ def parse_date(date_str):
         raise DateInWrongFormat
 
 
-def create_conversion_entry(date_str, amount, base_currency, target_currency, converted_amount):
-    return {
-            "date": date_str,
-            "amount": amount,
-            "base_currency": base_currency,
-            "target_currency": target_currency,
-            "converted_amount": converted_amount
-            }
-
-
-def load_json_file_if_exists_or_return_empty_list(filepath):
-    if os.path.exists(filepath):
-        with open(filepath, 'r') as file:
-            try:
-                data = json.load(file)
-            except json.JSONDecodeError:
-                data = []
-        return data
-    return []
-
-
-def update_json_file(filepath, new_entry):
-    data = load_json_file_if_exists_or_return_empty_list(filepath)
-    data.append(new_entry)
-
-    # Some sources claim that due to json structure, append from the last line wouldn't work and thus rewriting is standard
-    with open(filepath, 'w') as file:
-        json.dump(data, file, indent=4)
-
-
-def save_conversion_rates(date_str, base_currency, target_currency, conversion_rate):
-    data = load_json_file_if_exists_or_return_empty_list('cached_conversion_rates.json')
-
-    def update_nested_dict(d, keys, value):
-        for key in keys[:-1]:
-            if key not in d:
-                d[key] = {}
-            d = d[key]
-        d[keys[-1]] = value
-    if data == []:
-        cache_dict = {}
-        data = [cache_dict]
-    else:
-        cache_dict = data[0]
-
-    update_nested_dict(cache_dict, [date_str, base_currency, target_currency], conversion_rate)
-
-    with open('cached_conversion_rates.json', 'w') as file:
-        json.dump(data, file, indent=4)
-
-
 def main(date_str):
+    # while True:
     try:
         date = parse_date(date_str)
         print(f"Performing currency conversion for the date: {date.strftime('%Y-%m-%d')}")
@@ -140,20 +80,17 @@ def main(date_str):
         base_currency = receive_currency_and_validate()
         target_currency = receive_currency_and_validate()
 
-        cached_conversion_rate = get_cached_conversion_rate(date_str, base_currency, target_currency)
+        cache_manager = ConversionsCacheController(date_str, base_currency, target_currency)
+        cached_conversion_rate = cache_manager.get_cached_conversion_rate()
         conversion_rate = cached_conversion_rate if cached_conversion_rate else get_conversion_rate_from_api(base_currency, target_currency, date)
+        cache_manager.save_conversion_rates(conversion_rate)
 
         converted_amount = calculate_converted_amount(amount, conversion_rate)
         output_result(amount, base_currency, target_currency, converted_amount)
 
-        new_entry = create_conversion_entry(date_str, amount, base_currency, target_currency, converted_amount)
-        update_json_file('conversions.json', new_entry)
+        logs_manager = ConversionsLogsController(date_str, amount, base_currency, target_currency, converted_amount)
+        logs_manager.update_logs()
 
-        save_conversion_rates(date_str, base_currency, target_currency, conversion_rate)
-
-    # except ValueError:
-    #     print("Error: The date format should be YYYY-MM-DD.")
-    #     sys.exit(1)
     except FormattingInputException as e:
         print(e.correct_format_message)
         if e.should_finish_program:
