@@ -12,7 +12,7 @@ with open('config.json', 'r') as file:
 
 
 def receive_input():
-    result = input()
+    result = input().strip()
     if not result.upper() == "END":
         return result
     else:
@@ -76,15 +76,13 @@ def parse_date(date_str):
 
 
 def create_conversion_entry(date_str, amount, base_currency, target_currency, converted_amount):
-    return [
-        {
+    return {
             "date": date_str,
             "amount": amount,
             "base_currency": base_currency,
             "target_currency": target_currency,
             "converted_amount": converted_amount
-        }
-            ]
+            }
 
 
 def load_json_file_if_exists_or_return_empty_list(filepath):
