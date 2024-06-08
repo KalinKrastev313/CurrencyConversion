@@ -22,7 +22,7 @@ currency_codes = ['AED',
 'BSD',
 'BTN',
 'BWP',
-'BYN',
+'BYN',  # brings weird errors
 'BZD',
 'CAD',
 'CDF',
