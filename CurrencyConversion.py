@@ -87,20 +87,50 @@ def create_conversion_entry(date_str, amount, base_currency, target_currency, co
             ]
 
 
-def update_json_file(filepath, new_entry):
-    data = []
-
+def load_json_file_if_exists_or_return_empty_list(filepath):
     if os.path.exists(filepath):
         with open(filepath, 'r') as file:
             try:
                 data = json.load(file)
             except json.JSONDecodeError:
                 data = []
+        return data
+    return []
 
+
+def update_json_file(filepath, new_entry):
+    data = load_json_file_if_exists_or_return_empty_list(filepath)
     data.append(new_entry)
 
     # Some sources claim that due to json structure, append from the last line wouldn't work and thus rewriting is standard
     with open(filepath, 'w') as file:
+        json.dump(data, file, indent=4)
+
+
+def save_conversion_rates(date_str, base_currency, target_currency, conversion_rate):
+    data = load_json_file_if_exists_or_return_empty_list('cached_conversion_rates.json')
+
+
+    # conversion_rates = {
+    #     "USD": {"EUR": 0.85, "JPY": 110.53, "GBP": 0.75},
+    #     "EUR": {"USD": 1.18, "JPY": 130.02, "GBP": 0.88}
+    # }
+
+    def update_nested_dict(d, keys, value):
+        for key in keys[:-1]:
+            if key not in d:
+                d[key] = {}
+            d = d[key]
+        d[keys[-1]] = value
+    if data == []:
+        cache_dict = {}
+        data = [cache_dict]
+    else:
+        cache_dict = data[0]
+
+    update_nested_dict(cache_dict, [date_str, base_currency, target_currency], conversion_rate)
+
+    with open('cached_conversion_rates.json', 'w') as file:
         json.dump(data, file, indent=4)
 
 
@@ -122,6 +152,8 @@ def main(date_str):
 
         new_entry = create_conversion_entry(date_str, amount, base_currency, target_currency, converted_amount)
         update_json_file('conversions.json', new_entry)
+
+        save_conversion_rates(date_str, base_currency, target_currency, conversion_rate)
 
     # except ValueError:
     #     print("Error: The date format should be YYYY-MM-DD.")
