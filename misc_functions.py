@@ -1,5 +1,6 @@
 import requests
 from json_cache_and_logs_management import get_api_key_from_config
+from custom_exceptions import APIUnresponsive
 
 
 def calculate_converted_amount(amount, conversion_rate):
@@ -21,4 +22,5 @@ def get_conversion_rate_from_api(base_currency, target_currency, date):
             return data['results'][target_currency]
         # Error yet to be handled
     else:
-        return {'error': f"Error {response.status_code}: {response.text}"}
+        raise APIUnresponsive(response)
+        # return {'error': f"Error {response.status_code}: {response.text}"}
