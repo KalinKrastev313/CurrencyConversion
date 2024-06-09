@@ -22,7 +22,7 @@ currency_codes = ['AED',
 'BSD',
 'BTN',
 'BWP',
-'BYN',  # brings weird errors
+# 'BYN',  # not supported by the api according to the returned error
 'BZD',
 'CAD',
 'CDF',

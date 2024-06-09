@@ -26,7 +26,6 @@ def main(date_str):
             logs_manager = ConversionsLogsController(date_str, amount, base_currency, target_currency, converted_amount)
             logs_manager.update_logs()
 
-        # These can be extended or somehow merged
         except CustomException as e:
             print(e.error_message)
             if e.should_finish_program:
