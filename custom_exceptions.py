@@ -20,8 +20,11 @@ class DateInWrongFormat(CustomException):
         self.should_finish_program = True
 
 
-class APIUnresponsive(CustomException):
+class APIResponseError(CustomException):
+    # When ForexAPI is down or the api key is expired, further attempts wouldn't bring different result
+    CODES_WHICH_STOP_THE_PROGRAM = [503, 504, 509, 511, 599]
+
     def __init__(self, response):
         self.response = response
         self.error_message = f"The requested information is not cached and the API didn't provide it. Error {response.status_code}: {response.text}"
-        self.should_finish_program = True
+        self.should_finish_program = True if response.status_code == self.CODES_WHICH_STOP_THE_PROGRAM else False
