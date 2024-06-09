@@ -1,7 +1,7 @@
 import sys
 from misc_functions import get_conversion_rate_from_api, calculate_converted_amount, output_result
 from input_management import parse_date, receive_amount_and_validate, receive_currency_and_validate
-from custom_exceptions import ProgramEndedException, FormattingInputException
+from custom_exceptions import CustomException
 from json_cache_and_logs_management import ConversionsCacheController, ConversionsLogsController
 
 
@@ -26,13 +26,11 @@ def main(date_str):
             logs_manager = ConversionsLogsController(date_str, amount, base_currency, target_currency, converted_amount)
             logs_manager.update_logs()
 
-        except FormattingInputException as e:
-            print(e.correct_format_message)
+        # These can be extended or somehow merged
+        except CustomException as e:
+            print(e.error_message)
             if e.should_finish_program:
                 sys.exit(1)
-            break
-        except ProgramEndedException:
-            print("Program was ended")
             break
 
 
