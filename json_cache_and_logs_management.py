@@ -74,8 +74,7 @@ class ConversionsCacheController(JSONManager):
 
         self.update_nested_dict(cache_dict, [self.date_str, self.base_currency, self.target_currency], conversion_rate)
 
-        with open(self.CACHE_DIRECTORY, 'w') as file:
-            json.dump(data, file, indent=4)
+        self.rewrite_the_data_into_a_json_file(self.CACHE_DIRECTORY, data)
 
     def get_cached_conversion_rate(self):
         with open(self.CACHE_DIRECTORY, 'r') as file:
